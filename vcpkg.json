@@ -1,0 +1,12 @@
+{
+    "name": "vcpkg",
+    "version": "0.0.1",
+    "dependencies": [
+        {
+            "name": "raylib"
+        },
+        {
+            "name": "eigen3"
+        }
+    ]
+}
