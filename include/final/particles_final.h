@@ -11,17 +11,27 @@ class Particle {
 private:
     vector_math::Vec2d m_position;
     vector_math::Vec2d m_velocity;
-    Color m_color;
     float m_radius;
+    Color m_color;
 
 public:
-    Particle(const vector_math::Vec2d &position, const vector_math::Vec2d &velocity, const Color &color, float radius);
+    Particle(Vector2 position, Vector2 velocity, float radius = 5.0f, Color color = BLACK);
 
-    static std::shared_ptr<Particle> create(const vector_math::Vec2d &position, const vector_math::Vec2d &velocity,
-                                            const Color &color, float radius);
+    static std::shared_ptr<Particle> create(Vector2 position, Vector2 velocity, float radius = 5.0f,
+                                            Color color = BLACK);
 
     void update();
-    void draw() const;
+    void draw();
+    bool isAlive();
+    Vector2 position();
+    Vector2 velocity();
+    void setPosition(Vector2 position);
+    void setVelocity(Vector2 velocity);
+    void reverseVelocity();
+    void bounceX();
+    void bounceY();
+    float radius();
+    Color color();
 };
 
 typedef std::shared_ptr<Particle> ParticlePtr;
@@ -36,7 +46,9 @@ public:
     static std::shared_ptr<ParticleSystem> create(int nParticles);
 
     void update();
-    void draw() const;
+    void draw();
+
+    void checkBounds();
 };
 
 typedef std::shared_ptr<ParticleSystem> ParticleSystemPtr;
