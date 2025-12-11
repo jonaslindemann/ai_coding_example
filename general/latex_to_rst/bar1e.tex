@@ -1,0 +1,74 @@
+\newpage
+\index{bar1e}
+\lhead[\bf bar1e]{\bf One dimensional bar element}
+\rhead[\bf One dimensional bar element]{\bf bar1e}
+\begin{tagx}
+\tag{Purpose:}
+Compute element stiffness matrix for a one dimensional bar element.
+\begin{figure}[hhh]
+\begin{center}
+\mbox{}\bild{bar1e_1.eps}
+\end{center}
+\end{figure}
+
+\vspace{-10mm}
+\tag{Syntax:}
+{\sf{Ke=bar1e(ex,ep)}}\\
+{\sf{[Ke,fe]=bar1e(ex,ep,eq)}}
+
+\vspace{5mm}
+
+\tag{Description:}
+
+{\sf bar1e} provides the element stiffness matrix {\sf Ke} for a
+one dimensional bar element.
+The input variables
+\begin{eqnarray*}
+\begin{array}{l}
+{\sf ex}=[\;x_1 \;\; x_2 \;]  
+\end{array}
+\quad\quad
+{\sf ep} = \left[\;E \;A\;\right]
+\end{eqnarray*}
+supply the element nodal coordinates
+$x_1$ and $x_2$, the modulus of elasticity $E$,
+and the cross section area $A$.
+
+The element load vector {\sf fe} can also be computed if uniformly
+distributed load is applied to the element.
+The optional input variable
+\begin{eqnarray*}
+{\sf eq} =\left[\begin{array}{cc} q_{\bar{x}}  \end{array} \right]
+\end{eqnarray*}
+then contains the distributed load per unit length, $q_{\bar{x}}$.
+
+\begin{figure}[hhh]
+\begin{center}
+\mbox{}\bild{bar1e_2.eps}
+\end{center}
+\end{figure}
+
+
+\tag{Theory:}
+
+The element stiffness matrix $\bar{{\bf K}}^e$, stored in {\sf Ke}, is computed
+according to
+\begin{eqnarray*}
+\bar{\bf K}^e=\frac{D_{EA}}L\left[
+\begin{array}{rr} 1 & -1  \\ -1 & 1  \end{array} \right]
+\end{eqnarray*}
+where the axial stiffness $D_{EA}$ and the length $L$ are given by
+\vspace{2mm}
+\begin{eqnarray*}
+D_{EA}=EA;\quad L= x_2-x_1 
+\end{eqnarray*}
+
+The element load vector $\bar{\bf f}_l^e$, stored in {\sf fe}, is computed
+according to%
+\begin{eqnarray*}
+\bar{\bf f}_l^e =\frac{q_{\bar{x}}L}{2}
+\left[
+\begin{array}{c}  1 \\  1 \end{array} \right]
+\end{eqnarray*}
+
+\end{tagx}

@@ -1,0 +1,1 @@
+Create a user interface for this model class. The user interface should display a table of the functions v(), V() and M(). Implement the table using the Qt table widgets. Use qtpy as the interface to Qt. When a value in the input values is changed the table should be updated to reflect the new values.

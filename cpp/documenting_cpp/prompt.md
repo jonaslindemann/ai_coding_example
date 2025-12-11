@@ -1,0 +1,1 @@
+Document this class for use with the Doxygen documentation generator.

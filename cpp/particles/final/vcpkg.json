@@ -1,0 +1,8 @@
+{
+  "name": "raylib-particles",
+  "version": "1.0.0",
+  "dependencies": [
+    "raylib",
+    "eigen3"
+  ]
+}

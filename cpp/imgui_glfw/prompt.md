@@ -1,0 +1,1 @@
+Create a short example of using ImGUI with the GLFW library. The example should create a window with a button that, when clicked, increments a counter displayed in the window. Use CMake for building the project and provide the necessary CMakeLists.txt file. Also, use vcpkg for dependency management. 
