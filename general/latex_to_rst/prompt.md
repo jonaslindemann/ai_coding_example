@@ -1,4 +1,4 @@
-Convert the following file to rst documentation. Use ^^^^ as the level of the section. tags should be implemented as:
+Convert the bar1e.tex file to rst documentation. Use ^^^^ as the level of the section. tags should be implemented as:
 
 :purpose:
 
