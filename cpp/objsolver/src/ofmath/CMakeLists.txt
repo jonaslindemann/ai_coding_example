@@ -1,0 +1,5 @@
+FILE(GLOB SOURCE_FILES *.cpp)
+FILE(GLOB INCLUDE_FILES ${PROJECT_SOURCE_DIR}/include/ofmath/*.h) 
+
+ADD_LIBRARY(ofmath ${INCLUDE_FILES} ${SOURCE_FILES})
+set_target_properties(ofmath PROPERTIES DEBUG_POSTFIX d)

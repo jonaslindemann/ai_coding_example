@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmake --preset windows-profile)",
+      "Bash(cmake --help)",
+      "Bash(cmake --build --preset profile)"
+    ]
+  }
+}

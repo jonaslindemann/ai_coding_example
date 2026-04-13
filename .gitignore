@@ -33,3 +33,5 @@
 
 build/
 vcpkg_installed/
+cpp/objsolver/bin/objsolver.pdb
+/cpp/objsolver/bin/RelWithDebInfo
