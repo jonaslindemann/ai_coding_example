@@ -99,6 +99,8 @@ private:
     SpMatrix m_Ksys;
     SpMatrix m_Ksysf;
 
+    bool m_factorized = false;
+
     Eigen::Index m_nFreeDofs;
     Eigen::Index m_nDofs;
 
@@ -128,6 +130,8 @@ public:
     bool setup(const SpMatrix &K, const IntColVec &bcDofs, const ColVec &bcVals);
     bool solve(const ColVec &f, ColVec &a, ColVec &Q);
     bool recompute(const ColVec &f, ColVec &a, ColVec &Q);
+    bool factorize();
+    void invalidateFactorization();
 };
 
 typedef std::shared_ptr<SparseSolver> SparseSolverPtr;

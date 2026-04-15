@@ -16,4 +16,4 @@ target_link_libraries(ofsolve
     PRIVATE logger
 )
 
-set_target_properties(ofsolve PROPERTIES DEBUG_POSTFIX d)
+ set_target_properties(ofsolve PROPERTIES DEBUG_POSTFIX d)

@@ -21,7 +21,7 @@
 // Comments and suggestions to jonas.lindemann@byggmek.lth.se
 
 #include <ofsolve/calfem.h>
-#include <logger.h>
+#include <logger.h> 
 
 namespace calfem {
 
@@ -133,13 +133,18 @@ void beam3e(const RowVec &ex, const RowVec &ey, const RowVec &ez, const RowVec &
     double Kv = ep(5);
 
     double a = E * A / L;
-    double b = 12.0 * E * Iz / pow(L, 3);
-    double c = 6.0 * E * Iz / pow(L, 2);
-    double d = 12.0 * E * Iy / pow(L, 3);
-    double e = 6.0 * E * Iy / pow(L, 2);
+    // Precompute powers of L to avoid repeated calls to pow() in hot code
+    double L2 = L * L;
+    double L3 = L2 * L;
+    double L4 = L2 * L2;
+
+    double b = 12.0 * E * Iz / L3;
+    double c = 6.0 * E * Iz / L2;
+    double d = 12.0 * E * Iy / L3;
+    double e = 6.0 * E * Iy / L2;
     double f = Gs * Kv / L;
     double g = 2.0 * E * Iy / L;
-    double h = 2 * E * Iz / L;
+    double h = 2.0 * E * Iz / L;
 
     Matrix Kle(12, 12);
 
@@ -222,13 +227,23 @@ void beam3s(const RowVec &ex, const RowVec &ey, const RowVec &ez, const RowVec &
     G.block(6, 6, 3, 3) = An;
     G.block(9, 9, 3, 3) = An;
 
+
     // Use fixed-size vectors for stack allocation
     Vector12 u;
     Vector12 diffSol;
 
-    diffSol << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -qx * pow(L, 2) / 2.0 / E / A, qy * pow(L, 4) / 24.0 / E / Iz,
-        qz * pow(L, 4) / 24.0 / E / Iy, -qw * pow(L, 2) / 2.0 / Gs / Kv, -qz * pow(L, 3) / 6.0 / E / Iy,
-        qy * pow(L, 3) / 6.0 / E / Iz;
+    // Precompute powers of L to avoid repeated calls to pow()
+    double L2 = L * L;
+    double L3 = L2 * L;
+    double L4 = L2 * L2;
+
+    diffSol << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        -qx * L2 / 2.0 / E / A,
+        qy * L4 / 24.0 / E / Iz,
+        qz * L4 / 24.0 / E / Iy,
+        -qw * L2 / 2.0 / Gs / Kv,
+        -qz * L3 / 6.0 / E / Iy,
+        qy * L3 / 6.0 / E / Iz;
 
     // u = G*ed.AsColumn() - diffSol;
     u = G * ed.transpose() - diffSol;
@@ -239,10 +254,10 @@ void beam3s(const RowVec &ex, const RowVec &ey, const RowVec &ez, const RowVec &
     C << 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, L, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, pow(L, 3),
-        pow(L, 2), L, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, pow(L, 3), pow(L, 2), L, 1.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, L, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, L3,
+        L2, L, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, L3, L2, L, 1.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, L, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-        -3.0 * pow(L, 2), -2.0 * L, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0 * pow(L, 2), 2.0 * L, 1, 0.0, 0.0, 0.0, 0.0, 0.0,
+        -3.0 * L2, -2.0 * L, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0 * L2, 2.0 * L, 1, 0.0, 0.0, 0.0, 0.0, 0.0,
         0, 0.0;
 
     Vector12 m;
@@ -258,6 +273,7 @@ void beam3s(const RowVec &ex, const RowVec &ey, const RowVec &ez, const RowVec &
     eci.resize(n);
     eci.setZero();
 
+    // Precompute constants outside the loop and only compute x-dependent values per iteration
     for (auto i = 0; i < n; i++)
     {
         eci(i) = double(i) * L / double(n - 1);
@@ -266,28 +282,37 @@ void beam3s(const RowVec &ex, const RowVec &ey, const RowVec &ez, const RowVec &
         // Use fixed-size matrices for stack allocation (critical for performance)
         Matrix6x12 T1;
 
-        T1 << E * A, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -6.0 * E * Iz, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -6.0 * E * Iy, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Gs * Kv, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -6.0 * E * Iy * x,
-            -2.0 * E * Iy, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 6.0 * E * Iz * x, 2.0 * E * Iz, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        // Fill T1 similarly to original implementation but keep it local per-iteration
+        T1 << E * A, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, -6.0 * E * Iz, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -6.0 * E * Iy, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Gs * Kv, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, -6.0 * E * Iy * x, -2.0 * E * Iy, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 6.0 * E * Iz * x, 2.0 * E * Iz, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
             0.0, 0.0;
+
+        double x2 = x * x;
 
         Vector6 T2;
 
-        T2 << -qx * x, -qy * x, -qz * x, -qw * x, -qz * pow(x, 2) / 2.0, qy * pow(x, 2) / 2.0;
+        T2 << -qx * x, -qy * x, -qz * x, -qw * x, -qz * x2 / 2.0, qy * x2 / 2.0;
 
         es.row(i) = (T1 * m + T2).transpose();
 
         Matrix4x12 T3;
 
-        T3 << x, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, pow(x, 3), pow(x, 2), x, 1.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, pow(x, 3), pow(x, 2), x, 1.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, x, 1.0;
+        double x3 = x2 * x;
+        double x4 = x2 * x2;
+
+        T3 << x, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, x3, x2, x, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, x3, x2, x, 1.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, x, 1.0;
 
         Vector4 T4;
 
-        T4 << -qx * pow(x, 2) / 2.0 / E / A, qy * pow(x, 4) / 24.0 / E / Iz, qz * pow(x, 4) / 24.0 / E / Iy,
-            -qw * pow(x, 2) / 2.0 / Gs / Kv;
+        T4 << -qx * x2 / 2.0 / E / A, qy * x4 / 24.0 / E / Iz, qz * x4 / 24.0 / E / Iy,
+            -qw * x2 / 2.0 / Gs / Kv;
 
         edi.row(i) = (T3 * m + T4).transpose();
     }
@@ -564,6 +589,27 @@ std::shared_ptr<SparseSolver> SparseSolver::create()
     return std::make_shared<SparseSolver>();
 }
 
+bool SparseSolver::factorize()
+{
+    m_solver.compute(m_Ksys);
+    if (m_solver.info() != Eigen::Success)
+    {
+        Logger::instance()->log(LogLevel::Error, "Sparse solver failed during factorize");
+        m_factorized = false;
+        return false;
+    }
+    m_factorized = true;
+    return true;
+}
+
+void SparseSolver::invalidateFactorization()
+{
+    // Only mark factorization as invalid. Do not attempt to assign a new
+    // Eigen::SimplicialLLT instance because its assignment operator is deleted.
+    // The next call to factorize() will recompute using m_Ksys.
+    m_factorized = false;
+}
+
 bool SparseSolver::setup(const SpMatrix &K, const IntColVec &bcDofs, const ColVec &bcVals)
 {
     m_K = &K;
@@ -604,21 +650,16 @@ bool SparseSolver::setup(const SpMatrix &K, const IntColVec &bcDofs, const ColVe
     m_ind = calfem::toZeroIndex(m_freeDofsVec);
     m_pind = calfem::toZeroIndex(m_bcDofsVec);
 
-    std::set<Eigen::Index> indSet(m_ind.begin(), m_ind.end());
-    std::set<Eigen::Index> pindSet(m_pind.begin(), m_pind.end());
+    // Create direct lookup vectors to map global DOF index -> compact index
+    // This avoids std::set / std::map overhead when iterating matrix non-zeros.
+    std::vector<Eigen::Index> indMapVec(m_nDofs, -1);
+    std::vector<Eigen::Index> pindMapVec(m_nDofs, -1);
 
-    std::map<Eigen::Index, Eigen::Index> indMap;
-    std::map<Eigen::Index, Eigen::Index> pindMap;
+    for (Eigen::Index ii = 0; ii < static_cast<Eigen::Index>(m_ind.size()); ++ii)
+        indMapVec[m_ind[ii]] = ii;
 
-    Eigen::Index i = 0;
-
-    for (auto &idx : m_ind)
-        indMap[idx] = i++;
-
-    i = 0;
-
-    for (auto &idx : m_pind)
-        pindMap[idx] = i++;
+    for (Eigen::Index ii = 0; ii < static_cast<Eigen::Index>(m_pind.size()); ++ii)
+        pindMapVec[m_pind[ii]] = ii;
 
     for (int k = 0; k < (*m_K).outerSize(); ++k)
         for (SpMatrix::InnerIterator it((*m_K), k); it; ++it)
@@ -627,21 +668,29 @@ bool SparseSolver::setup(const SpMatrix &K, const IntColVec &bcDofs, const ColVe
             auto r = it.row();
             auto c = it.col();
 
-            if ((indSet.find(r) != indSet.end()) && (indSet.find(c) != indSet.end()))
+            Eigen::Index r_ind = (r >= 0 && r < m_nDofs) ? indMapVec[r] : -1;
+            Eigen::Index c_ind = (c >= 0 && c < m_nDofs) ? indMapVec[c] : -1;
+
+            if ((r_ind != -1) && (c_ind != -1))
             {
-                m_Ksyslist.push_back(Triplet(indMap[r], indMap[c], v));
+                m_Ksyslist.push_back(Triplet(r_ind, c_ind, v));
             }
 
-            if ((indSet.find(r) != indSet.end()) && (pindSet.find(c) != pindSet.end()))
+            Eigen::Index c_pind = (c >= 0 && c < m_nDofs) ? pindMapVec[c] : -1;
+            if ((r_ind != -1) && (c_pind != -1))
             {
-                m_Ksysflist.push_back(Triplet(indMap[r], pindMap[c], v));
+                m_Ksysflist.push_back(Triplet(r_ind, c_pind, v));
             }
         }
 
+    
     m_Ksys.setFromTriplets(m_Ksyslist.begin(), m_Ksyslist.end());
     m_Ksysf.setFromTriplets(m_Ksysflist.begin(), m_Ksysflist.end());
 
     Logger::instance()->log(LogLevel::Debug, "Ksys non zeros = %ld, Ksys size = %ld", m_Ksys.nonZeros(), m_Ksys.rows());
+
+    // Mark that the numeric factorization must be (re)computed before first solve
+    m_factorized = false;
 
     return true;
 }
@@ -651,10 +700,11 @@ bool SparseSolver::solve(const ColVec &f, ColVec &a, ColVec &Q)
     a.resize(m_nDofs);
     a.setZero();
 
+    // Apply prescribed boundary values to 'a'.
+    // m_bcDofsVec is populated in setup(); avoid duplicating entries here.
     for (auto i = 0; i < (*m_bcDofs).rows(); i++)
     {
-        m_bcDofsVec.push_back((*m_bcDofs)(i));
-        a((*m_bcDofs)(i)-1) = (*m_bcVals)(i);
+        a((*m_bcDofs)(i) - 1) = (*m_bcVals)(i);
     }
 
     m_fsys.resize(m_nFreeDofs);
@@ -663,12 +713,18 @@ bool SparseSolver::solve(const ColVec &f, ColVec &a, ColVec &Q)
 
     Logger::instance()->log(LogLevel::Debug, "fsys max = %g, f max = %g", m_fsys.maxCoeff(), f.maxCoeff());
 
-    m_solver.compute(m_Ksys);
-    if (m_solver.info() != Eigen::Success)
+    // Compute numeric factorization only if it hasn't been computed yet
+    if (!m_factorized)
     {
-        Logger::instance()->log(LogLevel::Error, "Sparse solver failed during factorization");
-        return false;
+        m_solver.compute(m_Ksys);
+        if (m_solver.info() != Eigen::Success)
+        {
+            Logger::instance()->log(LogLevel::Error, "Sparse solver failed during factorization");
+            return false;
+        }
+        m_factorized = true;
     }
+
     m_asys = m_solver.solve(m_fsys);
 
     a(m_ind) = m_asys;
@@ -684,10 +740,11 @@ bool SparseSolver::recompute(const ColVec &f, ColVec &a, ColVec &Q)
     a.resize(m_nDofs);
     a.setZero();
 
+    // Apply prescribed boundary values to 'a'.
+    // m_bcDofsVec is populated in setup(); avoid duplicating entries here.
     for (auto i = 0; i < (*m_bcDofs).rows(); i++)
     {
-        m_bcDofsVec.push_back((*m_bcDofs)(i));
-        a((*m_bcDofs)(i)-1) = (*m_bcVals)(i);
+        a((*m_bcDofs)(i) - 1) = (*m_bcVals)(i);
     }
 
     m_fsys.resize(m_nFreeDofs);
@@ -696,10 +753,16 @@ bool SparseSolver::recompute(const ColVec &f, ColVec &a, ColVec &Q)
 
     Logger::instance()->log(LogLevel::Debug, "fsys max = %g", m_fsys.maxCoeff());
 
-    if (m_solver.info() != Eigen::Success)
+    // If the factorization hasn't been computed yet, compute it now.
+    if (!m_factorized)
     {
-        Logger::instance()->log(LogLevel::Error, "Sparse solver failed during recompute");
-        return false;
+        m_solver.compute(m_Ksys);
+        if (m_solver.info() != Eigen::Success)
+        {
+            Logger::instance()->log(LogLevel::Error, "Sparse solver failed during recompute factorization");
+            return false;
+        }
+        m_factorized = true;
     }
 
     m_asys = m_solver.solve(m_fsys);
