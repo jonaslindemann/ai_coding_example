@@ -35,3 +35,5 @@ build/
 vcpkg_installed/
 cpp/objsolver/bin/objsolver.pdb
 /cpp/objsolver/bin/RelWithDebInfo
+/python/bridge/__pycache__
+/python/bridge/final/__pycache__
