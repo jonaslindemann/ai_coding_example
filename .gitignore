@@ -37,3 +37,5 @@ cpp/objsolver/bin/objsolver.pdb
 /cpp/objsolver/bin/RelWithDebInfo
 /python/bridge/__pycache__
 /python/bridge/final/__pycache__
+/python/wall/final/__pycache__
+/cpp/objsolver/.vscode

@@ -1,0 +1,1 @@
+Create an example of a parametric concrete wall implemented as a class in calfem using suitable elements. The wall class should be able to add holes and doors. You should be able to set total width and height and other relevant parameters. The class should be able to plot the stresses both von mises as well as main principle stresses.
