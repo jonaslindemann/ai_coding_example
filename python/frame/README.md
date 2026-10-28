@@ -23,7 +23,8 @@ regenerated with `python figures/make_figures.py`.
 | Verification | `verification.py`, `test_frame_model.py` | Engineer |
 | Failure modes demo | `failure_modes.py` | Engineer |
 | Calculation report | `final/frame_report.py` | AI-assisted |
-| Web application | `final/frame_app.py` | AI-assisted |
+| Web application | `final/frame_app.py`, `final/test_frame_app.py` | AI-assisted |
+| Design search | `final/frame_design.py` | AI-assisted |
 
 The application layer may only *present* results from the core. It never
 computes engineering quantities itself.
@@ -37,6 +38,8 @@ python failure_modes.py        # three plausible-but-wrong variants
 
 cd final
 python frame_report.py         # writes frame_report.html
+python frame_design.py         # lightest section combinations, pinned bases
+python -m pytest               # simulated-user tests of the web application
 python frame_app.py            # http://localhost:8080
 ```
 

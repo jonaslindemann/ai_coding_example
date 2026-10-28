@@ -38,6 +38,9 @@ from verification import run_benchmarks         # noqa: E402
 from frame_report import (                      # noqa: E402
     build_report, deformation_scale, diagram_polygon, diagram_scale,
 )
+from frame_design import (                      # noqa: E402
+    beam_candidates, check_ratios, column_candidates, design_search,
+)
 
 DEBOUNCE = 0.25          # seconds of quiet before re-solving
 PLOT_CONFIG = {"displaylogo": False, "responsive": True}
@@ -65,7 +68,10 @@ DIAGRAMS = {
     "Normal force": ("N", "Normal force (tension +)", 1e3, "kN"),
 }
 RESULT_TABS = ["Model", "Deformed", "Moment", "Shear", "Normal force",
-               "Utilisation", "Verification"]
+               "Utilisation", "Design", "Verification"]
+COLOR_PASS = "rgb(26, 152, 80)"
+COLOR_FAIL = "rgb(176, 190, 197)"
+DESIGN_ROWS = 12         # designs listed in the design table
 
 # The benchmarks do not depend on the inputs - run them once at start-up
 BENCHMARKS = run_benchmarks()
@@ -287,6 +293,62 @@ def figure_utilisation(frame):
     return traces, layout
 
 
+def design_label(r):
+    return (f"{r['column']} / {r['beam']}<br>{r['mass']:.0f} kg<br>"
+            f"drift h/{1 / r['drift']:.0f}, deflection L/{1 / r['deflection']:.0f}, "
+            f"utilisation {100 * r['utilisation']:.0f} %<br>governed by {r['governs']}")
+
+
+def figure_design(rows, frame):
+    """Steel mass against the governing check ratio for every combination."""
+    n_ok = sum(r["ok"] for r in rows)
+    layout = {
+        "title": {"text": f"Design space - {n_ok} of {len(rows)} combinations pass "
+                          f"all checks (lower left is lighter and safer)",
+                  "x": 0.01, "font": {"size": 14}},
+        "showlegend": True,
+        "legend": {"orientation": "h", "y": -0.18},
+        "hovermode": "closest",
+        "margin": {"l": 60, "r": 20, "t": 45, "b": 70},
+        "xaxis": {"title": "Steel mass (kg)"},
+        "yaxis": {"title": "Governing check / limit"},
+        "plot_bgcolor": "white",
+        "shapes": [{"type": "line", "xref": "paper", "x0": 0, "x1": 1, "y0": 1, "y1": 1,
+                    "line": {"color": "rgb(215, 48, 39)", "dash": "dash", "width": 1.5}}],
+        "annotations": [{"xref": "paper", "x": 1, "y": 1, "yshift": 10, "yref": "y",
+                         "text": "limit", "showarrow": False, "xanchor": "right",
+                         "font": {"color": "rgb(215, 48, 39)", "size": 11}}],
+    }
+    traces = []
+    for ok, name, color in ((False, "Fails a check", COLOR_FAIL), (True, "Passes all checks", COLOR_PASS)):
+        group = [r for r in rows if r["ok"] == ok]
+        traces.append({
+            "type": "scatter", "mode": "markers", "name": name,
+            "x": [r["mass"] for r in group], "y": [r["ratio"] for r in group],
+            "text": [design_label(r) for r in group], "hoverinfo": "text",
+            "marker": {"size": 10, "color": color, "line": {"width": 1, "color": "white"}},
+        })
+    best = next((r for r in rows if r["ok"]), None)
+    if best:
+        traces.append({
+            "type": "scatter", "mode": "markers+text", "name": "Lightest passing",
+            "x": [best["mass"]], "y": [best["ratio"]], "hoverinfo": "skip",
+            "text": [f"{best['column']} / {best['beam']}"], "textposition": "bottom right",
+            "marker": {"size": 18, "color": "rgba(0,0,0,0)",
+                       "line": {"width": 2.5, "color": COLOR_PASS}},
+        })
+    s = frame.summary_values
+    ratios = check_ratios(frame, s)
+    traces.append({
+        "type": "scatter", "mode": "markers", "name": "Current design",
+        "x": [s["steel_mass"]], "y": [max(ratios.values())],
+        "text": [f"Current: {frame.column_section} / {frame.beam_section}"],
+        "hoverinfo": "text",
+        "marker": {"size": 16, "symbol": "star", "color": "#1565c0"},
+    })
+    return traces, layout
+
+
 # ----------------------------------------------------------------------
 # Application
 # ----------------------------------------------------------------------
@@ -294,6 +356,7 @@ def figure_utilisation(frame):
 class FrameApp:
     def __init__(self):
         self.frame = None
+        self.design = None       # last design search: {"key", "rows"}
         self._requested = 0
         self._solve_id = 0
 
@@ -417,6 +480,19 @@ class FrameApp:
                                               on_change=self.render_current).classes("w-48")
                 self.scale_slider.props("label")
             self.verification = ui.column().classes("w-full px-2 gap-2")
+            with ui.column().classes("w-full px-2 gap-2") as self.design_panel:
+                with ui.row().classes("items-center gap-4 w-full"):
+                    self.design_button = ui.button(
+                        "Find lightest designs", icon="search",
+                        on_click=self.run_design_search).props("no-caps")
+                    self.h_columns_only = ui.switch(
+                        "H-sections only for columns (the model has no buckling check)",
+                        value=True)
+                self.design_note = ui.label(
+                    "Solves every column/beam combination for the current geometry, "
+                    "supports and loads. Click a row to apply that design.").classes(
+                    "text-sm text-gray-600")
+                self.design_table = ui.column().classes("w-full")
             with ui.row().classes("items-center gap-2 px-2"):
                 self.spinner = ui.spinner(size="sm")
                 self.status = ui.label("Solving ...").classes("text-sm")
@@ -495,15 +571,22 @@ class FrameApp:
         if self.frame is None:
             return
         tab = self.tabs.value
-        is_plot = tab != "Verification"
+        is_plot = tab != "Verification" and (tab != "Design" or self.design is not None)
         self.plot.set_visibility(is_plot)
-        self.verification.set_visibility(not is_plot)
+        self.verification.set_visibility(tab == "Verification")
+        self.design_panel.set_visibility(tab == "Design")
         self.scale_row.set_visibility(tab == "Deformed")
-        if not is_plot:
+        if tab == "Verification":
             self._render_verification()
             return
+        if tab == "Design":
+            self._render_design_table()
+            if self.design is None:
+                return
 
-        if tab == "Model":
+        if tab == "Design":
+            data, layout = figure_design(self.design["rows"], self.frame)
+        elif tab == "Model":
             data, layout = figure_model(self.frame)
         elif tab == "Deformed":
             data, layout = figure_deformed(self.frame, self.scale_slider.value)
@@ -513,6 +596,86 @@ class FrameApp:
             data, layout = figure_diagram(self.frame, tab)
         self.plot.figure = {"data": data, "layout": layout, "config": PLOT_CONFIG}
         self.plot.update()
+
+    # ------------------------------------------------------------------
+    # Design search
+    # ------------------------------------------------------------------
+
+    def _design_key(self):
+        """Inputs a design search depends on: everything but the sections."""
+        params = self._read_inputs()
+        params.pop("column_section")
+        params.pop("beam_section")
+        return tuple(sorted(params.items())), self.h_columns_only.value
+
+    async def run_design_search(self):
+        try:
+            key = self._design_key()
+        except ValueError as error:
+            ui.notify(str(error), type="warning")
+            return
+        params = dict(key[0])
+        columns = column_candidates(h_sections_only=key[1])
+        beams = beam_candidates()
+        self.design_button.props("loading")
+        t0 = time.perf_counter()
+        try:
+            rows = await run.io_bound(design_search, params, columns, beams)
+        finally:
+            self.design_button.props(remove="loading")
+        self.design = {"key": key, "rows": rows}
+        self.design_note.text = (
+            f"Solved {len(rows)} combinations in {time.perf_counter() - t0:.1f} s. "
+            f"Click a row to apply that design.")
+        self.render_current()
+
+    def _render_design_table(self):
+        self.design_table.clear()
+        if self.design is None:
+            return
+        rows = self.design["rows"]
+        passing = [r for r in rows if r["ok"]]
+        # No passing design: list the ones closest to passing instead
+        shown = passing[:DESIGN_ROWS] or sorted(rows, key=lambda r: r["ratio"])[:5]
+        with self.design_table:
+            try:
+                stale = self._design_key() != self.design["key"]
+            except ValueError:
+                stale = True
+            if stale:
+                ui.label("Inputs have changed since this search - run it again.").classes(
+                    "text-sm text-red-700")
+            if not passing:
+                ui.label("No combination passes all checks. Closest designs:").classes(
+                    "text-sm text-red-700")
+            columns = [
+                {"name": "rank", "label": "#", "field": "rank"},
+                {"name": "column", "label": "Columns", "field": "column", "align": "left"},
+                {"name": "beam", "label": "Beams", "field": "beam", "align": "left"},
+                {"name": "mass", "label": "Steel (kg)", "field": "mass"},
+                {"name": "drift", "label": "Drift", "field": "drift"},
+                {"name": "deflection", "label": "Deflection", "field": "deflection"},
+                {"name": "utilisation", "label": "Utilisation", "field": "utilisation"},
+                {"name": "governs", "label": "Governs", "field": "governs", "align": "left"},
+            ]
+            table_rows = [{
+                "id": i, "rank": i + 1, "column": r["column"], "beam": r["beam"],
+                "mass": f"{r['mass']:.0f}",
+                "drift": f"h/{1 / r['drift']:.0f}",
+                "deflection": f"L/{1 / r['deflection']:.0f}",
+                "utilisation": f"{100 * r['utilisation']:.0f} %",
+                "governs": r["governs"],
+            } for i, r in enumerate(shown)]
+            table = ui.table(columns=columns, rows=table_rows).props(
+                "dense flat").classes("w-full cursor-pointer")
+            table.on("rowClick", self.apply_design)
+
+    def apply_design(self, event):
+        # Quasar's rowClick sends (event, row, index); pick the row dict
+        row = next(a for a in event.args if isinstance(a, dict) and "column" in a)
+        self.column.value = row["column"]
+        self.beam.value = row["beam"]
+        ui.notify(f"Applied {row['column']} columns and {row['beam']} beams")
 
     # ------------------------------------------------------------------
     # Model update

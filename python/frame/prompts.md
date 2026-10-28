@@ -22,3 +22,12 @@ Create a web application for the PlaneFrame class in frame_model.py using NiceGU
 - Work on smaller screens
 
 Put the application in frame_app.py and make it runnable with "python frame_app.py". List the extra dependencies needed (nicegui, plotly).
+
+Add a design search to the web application in frame_app.py. Do not modify frame_model.py or sections.py, and use PlaneFrame.summary() for every pass/fail decision. The search should:
+- Solve every combination of column and beam sections for the current geometry, supports, loads and steel grade. Beams are IPE sections. Columns are HEA/HEB sections by default, with a switch to include IPE sections, labelled to say that the model has no buckling check
+- Rank the combinations by steel mass, passing designs first, and state which check governs each design
+- Show a "Design" result tab with a plot of steel mass against the governing check ratio (1.0 = at the limit), marking passing and failing designs, the lightest passing design and the current design
+- List the lightest passing designs in a table; clicking a row applies that design to the inputs
+- Warn when the inputs have changed since the last search
+- Run without blocking the page
+Put the search itself in frame_design.py so it can also be run from the command line, and add simulated-user tests for the new tab.
