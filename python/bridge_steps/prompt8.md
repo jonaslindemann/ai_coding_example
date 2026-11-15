@@ -1,0 +1,3 @@
+truss_model.py and tests/ are verified and frozen. Do not modify them. Use only the public API: TrussBridge(...), solve(), a, r, N.
+
+Build a Qt (qtpy) UI that lets the user select the truss type, adjust parameters, show the deformed shape and display colour-coded normal forces. Show the deformation scale factor on screen. Use a diverging colour map centred on zero, so tension and compression are distinguishable. Try to make the interface intuitive and responsive, updating the visualization in real time as parameters are changed.

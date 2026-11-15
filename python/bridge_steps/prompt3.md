@@ -1,0 +1,1 @@
+Please annotate the TrussBridge class and its methods with clear docstrings explaining the purpose, inputs, and outputs of each method. Include explanations for the geometry and topology construction, the edof matrix, and the boundary-condition DOFs. Also add inline comments to clarify the logic and calculations within the code.
